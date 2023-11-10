@@ -2,24 +2,43 @@ import torch
 from torchvision import models
 from torch import nn, optim
 
-def build_model(arch='vgg13', hidden_units=512):
-    # Load a pre-trained model
-    model = getattr(models, arch)(pretrained=True)
+from collections import OrderedDict
 
-    # Freeze parameters
-    for param in model.parameters():
-        param.requires_grad = False
-
-    # Replace the classifier
-    classifier = nn.Sequential(
-        nn.Linear(model.classifier[0].in_features, hidden_units),
-        nn.ReLU(),
-        nn.Dropout(0.5),
-        nn.Linear(hidden_units, 102),
-        nn.LogSoftmax(dim=1)
-    )
+def build_model(arch='vgg16', hidden_units=512):
+    if arch == 'vgg16':
+        model = models.vgg16(pretrained=True)
+        # Freeze parameters so we don't backprop through them
+        for param in model.parameters():
+            param.requires_grad = False
+        # Modify the classifier
+        classifier = nn.Sequential(OrderedDict([
+            ('fc1', nn.Linear(25088, hidden_units)),
+            ('relu', nn.ReLU()),
+            ('dropout', nn.Dropout(0.2)),
+            ('fc2', nn.Linear(hidden_units, 102)),
+            ('output', nn.LogSoftmax(dim=1))
+        ]))
+        
+    elif arch == 'densenet121':
+        model = models.densenet121(pretrained=True)
+        # Freeze parameters so we don't backprop through them
+        for param in model.parameters():
+            param.requires_grad = False
+        # Modify the classifier
+        classifier = nn.Sequential(OrderedDict([
+            ('fc1', nn.Linear(1024, hidden_units)),
+            ('relu', nn.ReLU()),
+            ('dropout', nn.Dropout(0.2)),
+            ('fc2', nn.Linear(hidden_units, 102)),
+            ('output', nn.LogSoftmax(dim=1))
+        ]))
+    
+    else:
+        raise ValueError("Architecture not supported. Please choose 'vgg16' or 'densenet121'")
+    
+    # Update the model's classifier
     model.classifier = classifier
-
+    
     return model
 
 def train_model(model, train_loader, valid_loader, learning_rate=0.01, epochs=5, gpu=False, batch_size=32):
