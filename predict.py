@@ -17,7 +17,7 @@ def main():
 
     # Load the category names mapping
     with open(args.category_names, 'r') as f:
-        cat_to_name = json.load(f)
+        cat_to_name = json.load(f, strict=False)
 
     # Load the checkpoint
     model, class_to_idx = load_checkpoint(args.checkpoint)
